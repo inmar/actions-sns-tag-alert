@@ -34,7 +34,21 @@ def guess_prev_tag(recent_tags, curr_tag):
     return "master"
 
 
+def fix_git_settings():
+    """
+    The GHA checkout action tries to set up the repo properly, but when you're
+    running a follow-up action out of a container the global config isn't
+    automatically shared to the container, so you have to reset things manually
+    """
+    subprocess.run(
+        "git config --global --add safe.directory /github/workspace",
+        shell=True,
+    )
+
+
 def main():
+    fix_git_settings()
+
     aws_access_key_id, aws_secret_access_key, topic_arn = sys.argv[1:4]
     region = topic_arn.split(":")[3]
 

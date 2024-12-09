@@ -5,15 +5,86 @@ import re
 import subprocess
 import sys
 
+from argparse import (ArgumentParser, ArgumentTypeError, RawTextHelpFormatter)
+
 import boto3
 
 
-def get_recent_tags():
+def arg_parser():
+    """ Set up CLI argument parsing """
+    parser = ArgumentParser(
+        description=dedent(
+            """
+            Creates a 'new tag' alert
+
+            Requirements:
+                Python 3.10+ is required
+            """
+        ),
+        formatter_class=RawTextHelpFormatter,
+        epilog="\n\n",
+    )
+
+    parser.add_argument(
+        "-i",
+        "--aws-id",
+        dest="aws_access_key_id",
+        type=str,
+        required=True,
+        help="AWS Key ID",
+    )
+
+    parser.add_argument(
+        "-k",
+        "--aws-key",
+        dest="aws_secret_access_key",
+        type=str,
+        required=True,
+        help="AWS Secret Access Key",
+    )
+
+    parser.add_argument(
+        "-t",
+        "--topic-arn",
+        dest="topic_arn",
+        type=sns_arn_type,
+        required=True,
+        help="SNS Topic ARN",
+    )
+
+    parser.add_argument(
+        "-p",
+        "--tag-pattern",
+        dest="tag_pattern",
+        type=str,
+        default=".*",
+        help="Regex pattern for valid tags",
+    )
+
+    parser.add_argument(
+        "--commit",
+        action="store_true",
+        help="Actually send the notification",
+    )
+
+    args = parser.parse_args()
+
+    return args
+
+
+def sns_arn_type(val):
+    if not re.match(r"arn:aws:sns:[a-z0-9-]+:\d{12}:[a-zA-Z0-9-_]+(.fifo)?", val):
+        raise ArgumentTypeError("Invalid ARN format: {0}".format(val))
+
+    return val
+
+
+def get_recent_tags(tag_pattern):
     """ Gets the last few tags in the repo; must be using SemVer or similar """
 
     return (
         subprocess.run(
-            "git tag | sort --version-sort -r | head | tr '\n' ' '",
+            "git tag --sort=-v:refname | grep -E '{0}' | head | tr '\n' ' '".format(tag_pattern),
             shell=True,
             capture_output=True,
         )
@@ -46,11 +117,8 @@ def fix_git_settings():
     )
 
 
-def main():
+def main(args):
     fix_git_settings()
-
-    aws_access_key_id, aws_secret_access_key, topic_arn = sys.argv[1:4]
-    region = topic_arn.split(":")[3]
 
     tag_prefix = "refs/tags/"
     git_tag = os.environ["GITHUB_REF"]
@@ -70,19 +138,22 @@ def main():
         "prev_tag": prev_tag,
     }
 
-    sns = boto3.client(
-        "sns",
-        aws_access_key_id=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key,
-        region_name=region,
-    )
+    if args.commit:
+        sns = boto3.client(
+            "sns",
+            aws_access_key_id=args.aws_access_key_id,
+            aws_secret_access_key=args.aws_secret_access_key,
+            region_name=args.topic_arn.split(":")[3],
+        )
 
-    sns.publish(
-        TopicArn=topic_arn,
-        Subject="[{0}] Tag Created - {1}".format(data["repo_name"], data["tag"]),
-        Message=json.dumps(data),
-    )
+        sns.publish(
+            TopicArn=args.topic_arn,
+            Subject="[{0}] Tag Created - {1}".format(data["repo_name"], data["tag"]),
+            Message=json.dumps(data),
+        )
+    else:
+        print(json.dumps(data, indent=4, sort_keys=True, default=str))
 
 
 if __name__ == "__main__":
-    main()
+    main(arg_parser())

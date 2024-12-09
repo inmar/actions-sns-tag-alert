@@ -118,7 +118,7 @@ def main(args):
     if git_tag.startswith(tag_prefix):
         git_tag = git_tag[len(tag_prefix) :]
 
-    recent_tags = get_recent_tags()
+    recent_tags = get_recent_tags(args.tag_pattern)
     print(recent_tags)
 
     prev_tag = "master"

@@ -20,4 +20,4 @@ runs:
     - -i${{ inputs.aws_key_id }}
     - -k${{ inputs.aws_secret_key }}
     - -t${{ inputs.topic_arn }}
-    - -p${{ inputs.tag_pattern }}
+    - -p${{ inputs.tag_pattern || '.*' }}

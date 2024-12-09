@@ -13,14 +13,7 @@ import boto3
 def arg_parser():
     """ Set up CLI argument parsing """
     parser = ArgumentParser(
-        description=dedent(
-            """
-            Creates a 'new tag' alert
-
-            Requirements:
-                Python 3.10+ is required
-            """
-        ),
+        description="Creates a 'new tag' alert",
         formatter_class=RawTextHelpFormatter,
         epilog="\n\n",
     )

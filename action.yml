@@ -21,3 +21,4 @@ runs:
     - -k${{ inputs.aws_secret_key }}
     - -t${{ inputs.topic_arn }}
     - -p${{ inputs.tag_pattern || '^v?\d+\.\d+\.\d+' }}
+    - --commit

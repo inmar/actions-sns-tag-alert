@@ -50,7 +50,7 @@ def arg_parser():
         "--tag-pattern",
         dest="tag_pattern",
         type=str,
-        default=".*",
+        default=r"^v?\d+\.\d+\.\d+",
         help="Regex pattern for valid tags",
     )
 
@@ -77,7 +77,7 @@ def get_recent_tags(tag_pattern):
 
     return (
         subprocess.run(
-            "git tag --sort=-v:refname | grep -E '{0}' | head | tr '\n' ' '".format(tag_pattern),
+            "git tag --sort=-v:refname | grep -P '{0}' | head | tr '\n' ' '".format(tag_pattern),
             shell=True,
             capture_output=True,
         )
@@ -85,17 +85,6 @@ def get_recent_tags(tag_pattern):
         .strip()
         .split(" ")
     )
-
-
-def guess_prev_tag(recent_tags, curr_tag):
-    """ Try to guess which tag came before the current one """
-
-    tag_form = re.compile(r"^v?\d+\.\d+\.\d+")
-    for tag in recent_tags:
-        if tag != curr_tag and tag_form.search(tag):
-            return tag
-
-    return "master"
 
 
 def fix_git_settings():
@@ -123,7 +112,7 @@ def main(args):
 
     prev_tag = "master"
     if recent_tags and len(recent_tags) > 1:
-        prev_tag = guess_prev_tag(recent_tags, git_tag)
+        prev_tag = next((tag for tag in recent_tags if tag != git_tag), "master")
 
     data = {
         "tag": git_tag,

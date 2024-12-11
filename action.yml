@@ -11,7 +11,7 @@ inputs:
     description: "The SNS topic to publish to"
     required: true
   tag_pattern:
-    description: "A regex pattern to match valid tag names; defaults to all tags"
+    description: "A regex pattern to match valid tag names; defaults to: ^v?\d+\.\d+\.\d+"
     required: false
 runs:
   using: 'docker'
@@ -20,4 +20,4 @@ runs:
     - -i${{ inputs.aws_key_id }}
     - -k${{ inputs.aws_secret_key }}
     - -t${{ inputs.topic_arn }}
-    - -p${{ inputs.tag_pattern || '.*' }}
+    - -p${{ inputs.tag_pattern || '^v?\d+\.\d+\.\d+' }}
